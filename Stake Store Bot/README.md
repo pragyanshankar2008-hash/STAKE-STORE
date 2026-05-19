@@ -1,6 +1,6 @@
-# 🏦 Titan Exchange — Ticket Bot
+# 🏦 Stake Store — Ticket Bot
 
-A fully-featured Discord ticket bot for Titan Exchange server.
+A fully-featured Discord ticket bot for Stake Store server.
 Built with `discord.py` + `SQLite`. Deployable on Railway via GitHub.
 
 ---
@@ -8,7 +8,7 @@ Built with `discord.py` + `SQLite`. Deployable on Railway via GitHub.
 ## 📁 Project Structure
 
 ```
-titan-exchange-bot/
+stake-store-bot/
 ├── bot.py              # Main entry point
 ├── database.py         # SQLite database manager
 ├── utils.py            # Shared helpers, embeds, transcript generator
@@ -55,7 +55,7 @@ git push -u origin main
 3. Go to your project → **Variables** tab and add:
    - `DISCORD_TOKEN` = your bot token
    - `PREFIX` = `!`
-   - `DB_PATH` = `/data/titan.db`
+   - `DB_PATH` = `/data/stake-store.db`
 4. Go to **Volumes** tab → Add Volume → Mount path: `/data`
    *(This keeps the SQLite database persistent across deploys!)*
 5. Deploy — bot should come online within 1-2 minutes ✅
@@ -139,11 +139,11 @@ Then create your ticket panel:
 |----------|---------|-------------|
 | `DISCORD_TOKEN` | required | Your bot token |
 | `PREFIX` | `!` | Prefix for text commands |
-| `DB_PATH` | `./data/titan.db` | Path to SQLite DB file |
+| `DB_PATH` | `./data/stake-store.db` | Path to SQLite DB file |
 
 ---
 
 ## 💾 Database Backup
 
-The SQLite database lives at the Railway Volume mount (`/data/titan.db`).
+The SQLite database lives at the Railway Volume mount (`/data/stake-store.db`).
 To back it up manually, download it from Railway's volume explorer or set up a cron job to copy it to an S3 bucket / Google Drive.
