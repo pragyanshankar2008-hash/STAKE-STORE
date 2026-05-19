@@ -1,6 +1,6 @@
 import aiosqlite, json, os
 
-DB_PATH = os.getenv('DB_PATH', './data/titan.db')
+DB_PATH = os.getenv('DB_PATH', './data/stake-store.db')
 
 class Database:
     def __init__(self):
@@ -15,6 +15,9 @@ class Database:
                     prefix              TEXT DEFAULT '!',
                     log_channel         INTEGER,
                     transcript_channel  INTEGER,
+                    transcript_i2c      INTEGER,
+                    transcript_c2i      INTEGER,
+                    transcript_c2c      INTEGER,
                     ticket_category     INTEGER,
                     admin_roles         TEXT DEFAULT '[]',
                     mod_roles           TEXT DEFAULT '[]',
@@ -25,7 +28,8 @@ class Database:
                     rate_override       REAL,
                     rate_i2c            REAL DEFAULT 101,
                     rate_c2i_below      REAL DEFAULT 97.5,
-                    rate_c2i_above      REAL DEFAULT 98.5
+                    rate_c2i_above      REAL DEFAULT 98.5,
+                    rate_c2c            REAL DEFAULT 100
                 );
 
                 CREATE TABLE IF NOT EXISTS panels (
@@ -38,6 +42,7 @@ class Database:
                     color       INTEGER DEFAULT 3447003,
                     footer      TEXT,
                     thumbnail   TEXT,
+                    panel_type  TEXT DEFAULT 'exchange',
                     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
 
@@ -98,7 +103,7 @@ class Database:
             ''')
             await db.commit()
 
-    # ── Config ────────────────────────────────────────────────────────────────
+    # ── Config ──────────────────────────────────────────────────────────[...]
 
     async def get_config(self, guild_id: int) -> dict:
         async with aiosqlite.connect(self.path) as db:
@@ -109,9 +114,11 @@ class Database:
                     await db.execute('INSERT OR IGNORE INTO guild_config (guild_id) VALUES (?)', (guild_id,))
                     await db.commit()
                     return {'guild_id': guild_id, 'prefix': '!', 'log_channel': None,
-                            'transcript_channel': None, 'ticket_category': None,
+                            'transcript_channel': None, 'transcript_i2c': None, 'transcript_c2i': None,
+                            'transcript_c2c': None, 'ticket_category': None,
                             'admin_roles': [], 'mod_roles': [], 'staff_roles': [], 'dealer_roles': [],
-                            'ticket_counter': 0, 'vouch_channel': None, 'rate_override': None, 'rate_i2c': 101, 'rate_c2i_below': 97.5, 'rate_c2i_above': 98.5}
+                            'ticket_counter': 0, 'vouch_channel': None, 'rate_override': None,
+                            'rate_i2c': 101, 'rate_c2i_below': 97.5, 'rate_c2i_above': 98.5, 'rate_c2c': 100}
                 d = dict(row)
                 for k in ['admin_roles','mod_roles','staff_roles','dealer_roles']:
                     d[k] = json.loads(d[k] or '[]')
@@ -126,21 +133,24 @@ class Database:
         async with aiosqlite.connect(self.path) as db:
             await db.execute('''
                 INSERT INTO guild_config
-                    (guild_id,prefix,log_channel,transcript_channel,ticket_category,
-                     admin_roles,mod_roles,staff_roles,dealer_roles,ticket_counter,vouch_channel,rate_override,rate_i2c,rate_c2i_below,rate_c2i_above)
+                    (guild_id,prefix,log_channel,transcript_channel,transcript_i2c,transcript_c2i,transcript_c2c,ticket_category,
+                     admin_roles,mod_roles,staff_roles,dealer_roles,ticket_counter,vouch_channel,rate_override,rate_i2c,rate_c2i_below,rate_c2i_above,rate_c2c)
                 VALUES
-                    (:guild_id,:prefix,:log_channel,:transcript_channel,:ticket_category,
-                     :admin_roles,:mod_roles,:staff_roles,:dealer_roles,:ticket_counter,:vouch_channel,:rate_override,:rate_i2c,:rate_c2i_below,:rate_c2i_above)
+                    (:guild_id,:prefix,:log_channel,:transcript_channel,:transcript_i2c,:transcript_c2i,:transcript_c2c,:ticket_category,
+                     :admin_roles,:mod_roles,:staff_roles,:dealer_roles,:ticket_counter,:vouch_channel,:rate_override,:rate_i2c,:rate_c2i_below,:rate_c2i_above,:rate_c2c)
                 ON CONFLICT(guild_id) DO UPDATE SET
                     prefix=excluded.prefix, log_channel=excluded.log_channel,
-                    transcript_channel=excluded.transcript_channel, ticket_category=excluded.ticket_category,
+                    transcript_channel=excluded.transcript_channel, transcript_i2c=excluded.transcript_i2c,
+                    transcript_c2i=excluded.transcript_c2i, transcript_c2c=excluded.transcript_c2c,
+                    ticket_category=excluded.ticket_category,
                     admin_roles=excluded.admin_roles, mod_roles=excluded.mod_roles,
                     staff_roles=excluded.staff_roles, dealer_roles=excluded.dealer_roles,
                     ticket_counter=excluded.ticket_counter, vouch_channel=excluded.vouch_channel,
                     rate_override=excluded.rate_override,
                     rate_i2c=excluded.rate_i2c,
                     rate_c2i_below=excluded.rate_c2i_below,
-                    rate_c2i_above=excluded.rate_c2i_above
+                    rate_c2i_above=excluded.rate_c2i_above,
+                    rate_c2c=excluded.rate_c2c
             ''', config)
             await db.commit()
 
@@ -150,13 +160,13 @@ class Database:
         await self.set_config(guild_id, ticket_counter=n)
         return n
 
-    # ── Panels ────────────────────────────────────────────────────────────────
+    # ── Panels ──────────────────────────────────────────────────────────[...]
 
-    async def create_panel(self, guild_id, channel_id, message_id, title, description, color, footer, thumbnail) -> int:
+    async def create_panel(self, guild_id, channel_id, message_id, title, description, color, footer, thumbnail, panel_type='exchange') -> int:
         async with aiosqlite.connect(self.path) as db:
             cur = await db.execute(
-                'INSERT INTO panels (guild_id,channel_id,message_id,title,description,color,footer,thumbnail) VALUES (?,?,?,?,?,?,?,?)',
-                (guild_id, channel_id, message_id, title, description, color, footer, thumbnail))
+                'INSERT INTO panels (guild_id,channel_id,message_id,title,description,color,footer,thumbnail,panel_type) VALUES (?,?,?,?,?,?,?,?,?)',
+                (guild_id, channel_id, message_id, title, description, color, footer, thumbnail, panel_type))
             await db.commit()
             return cur.lastrowid
 
@@ -176,7 +186,7 @@ class Database:
             await db.execute('UPDATE panels SET message_id=? WHERE id=?', (message_id, panel_id))
             await db.commit()
 
-    # ── Tickets ───────────────────────────────────────────────────────────────
+    # ── Tickets ──────────────────────────────────────────────────────────[...]
 
     async def create_ticket(self, guild_id, channel_id, user_id, category, ticket_number) -> int:
         async with aiosqlite.connect(self.path) as db:
@@ -272,7 +282,7 @@ class Database:
             ''', (amount_usd, guild_id, user_id))
             await db.commit()
 
-    # ── Deals & Stats ─────────────────────────────────────────────────────────
+    # ── Deals & Stats ────────────────────────────────────────────────────────[...]
 
     async def record_deal(self, guild_id, ticket_id, exchanger_id, client_id, pair, amount_usd, amount_inr, rate_used):
         async with aiosqlite.connect(self.path) as db:

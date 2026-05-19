@@ -5,6 +5,7 @@ import io
 CATEGORY_INFO = {
     'i2c': {'label': 'INR → Crypto', 'emoji': '💸', 'short': 'I2C'},
     'c2i': {'label': 'Crypto → INR', 'emoji': '💰', 'short': 'C2I'},
+    'c2c': {'label': 'Crypto → Crypto', 'emoji': '🔄', 'short': 'C2C'},
     'support': {'label': 'Support', 'emoji': '🎧', 'short': 'Support'},
     'dispute': {'label': 'Dispute / Issue', 'emoji': '⚠️', 'short': 'Dispute'},
 }
@@ -75,7 +76,7 @@ def hex_to_int(hex_str: str) -> int:
 def build_ticket_embed(category: str, user: discord.Member, ticket_number: int,
                        claimed_by: discord.Member = None, modal_answers: dict = None) -> discord.Embed:
     info = get_category_info(category)
-    colors = {'i2c': 0x2ECC71, 'c2i': 0xE74C3C, 'support': 0x9B59B6, 'dispute': 0xFF6B35}
+    colors = {'i2c': 0x2ECC71, 'c2i': 0xE74C3C, 'c2c': 0x3498DB, 'support': 0x9B59B6, 'dispute': 0xFF6B35}
     color = colors.get(category, 0x5865F2)
     embed = discord.Embed(
         title=f"{info['emoji']} {info['label']} — Ticket #{ticket_number:04d}",
@@ -95,7 +96,7 @@ def build_ticket_embed(category: str, user: discord.Member, ticket_number: int,
         value='> Staff will assist you shortly.\n> Do **not** ping staff — be patient.',
         inline=False
     )
-    embed.set_footer(text='Titan Exchange | /close to close ticket (staff only)')
+    embed.set_footer(text='Stake Store | /close to close ticket (staff only)')
     return embed
 
 async def generate_html_transcript(ticket: dict, messages: list, guild: discord.Guild) -> str:
@@ -125,5 +126,5 @@ body{{font-family:'Segoe UI',sans-serif;background:#1e1f22;color:#dcddde;margin:
   <p>Server: {guild.name} | Status: {ticket['status'].upper()} | Opened: {ticket['opened_at']}</p>
 </div>
 <div class="messages">{rows or '<p style="color:#72767d">No messages logged.</p>'}</div>
-<div class="footer">Titan Exchange Transcript</div>
+<div class="footer">Stake Store Transcript</div>
 </body></html>"""
