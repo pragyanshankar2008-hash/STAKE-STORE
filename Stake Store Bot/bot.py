@@ -6,9 +6,9 @@ from database import Database
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(name)s: %(message)s')
-log = logging.getLogger('TitanExchange')
+log = logging.getLogger('StakeStore')
 
-class TitanBot(commands.Bot):
+class StakeStoreBot(commands.Bot):
     def __init__(self):
         super().__init__(
             command_prefix=self._get_prefix,
@@ -46,7 +46,7 @@ class TitanBot(commands.Bot):
     async def on_ready(self):
         log.info(f'Logged in as {self.user} (ID: {self.user.id})')
         await self.change_presence(activity=discord.Activity(
-            type=discord.ActivityType.watching, name='Titan Exchange'))
+            type=discord.ActivityType.watching, name='Stake Store'))
 
     async def on_command_error(self, ctx, error):
         if isinstance(error, commands.MissingPermissions):
@@ -58,7 +58,7 @@ class TitanBot(commands.Bot):
         else:
             log.error(f'Command error: {error}')
 
-bot = TitanBot()
+bot = StakeStoreBot()
 
 async def main():
     token = os.getenv('DISCORD_TOKEN')
